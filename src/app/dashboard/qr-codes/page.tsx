@@ -2,11 +2,84 @@
 
 import { useSession } from "next-auth/react"
 import { redirect } from "next/navigation"
+import { useEffect, useState } from "react"
+import QRCode from "react-qr-code"
+import { toDataURL } from "qrcode"
+
+interface QRCodeData {
+  id: string
+  url: string
+  isActive: boolean
+  createdAt: string
+  item: {
+    id: string
+    name: string
+  }
+}
 
 export default function QRCodesPage() {
   const { data: session, status } = useSession()
+  const [qrCodes, setQrCodes] = useState<QRCodeData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  if (status === "loading") {
+  useEffect(() => {
+    const fetchQRCodes = async () => {
+      try {
+        const response = await fetch("/api/qr-codes")
+        if (!response.ok) {
+          throw new Error("Failed to fetch QR codes")
+        }
+        const data = await response.json()
+        setQrCodes(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to load QR codes")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchQRCodes()
+  }, [])
+
+  const handleDelete = async (itemId: string, qrCodeId: string) => {
+    if (!confirm("Are you sure you want to delete this QR code?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/items/${itemId}/qr-code?qrCodeId=${qrCodeId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete QR code")
+      }
+
+      setQrCodes((prevCodes) => prevCodes.filter((code) => code.id !== qrCodeId))
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to delete QR code")
+    }
+  }
+
+  const downloadQRCode = async (qrCode: QRCodeData) => {
+    try {
+      const dataUrl = await toDataURL(qrCode.url, {
+        width: 200,
+        margin: 1,
+        errorCorrectionLevel: 'H'
+      })
+      
+      const downloadLink = document.createElement("a")
+      downloadLink.download = `qr-code-${qrCode.id}.png`
+      downloadLink.href = dataUrl
+      downloadLink.click()
+    } catch (error) {
+      console.error("Error generating QR code:", error)
+    }
+  }
+
+  if (status === "loading" || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">Loading...</div>
@@ -24,59 +97,76 @@ export default function QRCodesPage() {
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">QR Codes</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Generate and manage QR codes for your inventory items.
+            A list of all QR codes generated for inventory items.
           </p>
         </div>
-        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-          <button
-            type="button"
-            className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            Generate QR Code
-          </button>
-        </div>
       </div>
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                      Item Name
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      QR Code
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Status
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                      Created At
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  <tr>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                      No QR codes yet
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">-</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">-</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">-</td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      -
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+
+      {error && (
+        <div className="mt-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {qrCodes.map((qrCode) => (
+          <div
+            key={qrCode.id}
+            className="relative bg-white p-4 shadow rounded-lg border border-gray-200"
+          >
+            <div className="flex justify-center mb-4">
+              <QRCode
+                value={qrCode.url}
+                size={200}
+                level="H"
+              />
+            </div>
+            <div className="text-sm text-gray-500">
+              <p className="font-medium text-gray-900">{qrCode.item.name}</p>
+              <p className="mt-1">Created: {new Date(qrCode.createdAt).toLocaleDateString()}</p>
+              <p className="mt-1">
+                Status:{" "}
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    qrCode.isActive
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {qrCode.isActive ? "Active" : "Inactive"}
+                </span>
+              </p>
+            </div>
+            <div className="mt-4 flex justify-center space-x-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(qrCode.url)
+                }}
+                className="text-sm text-indigo-600 hover:text-indigo-900"
+              >
+                Copy URL
+              </button>
+              <button
+                onClick={() => downloadQRCode(qrCode)}
+                className="text-sm text-indigo-600 hover:text-indigo-900"
+              >
+                Download
+              </button>
+              <button
+                onClick={() => handleDelete(qrCode.item.id, qrCode.id)}
+                className="text-sm text-red-600 hover:text-red-900"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        </div>
+        ))}
+
+        {qrCodes.length === 0 && (
+          <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-500">No QR codes found</p>
+          </div>
+        )}
       </div>
     </div>
   )

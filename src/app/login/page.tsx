@@ -6,7 +6,6 @@ import { useState } from "react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -22,14 +21,12 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError("Invalid credentials")
         return
       }
 
       router.push("/dashboard")
       router.refresh()
     } catch (error) {
-      setError("An error occurred")
     }
   }
 
@@ -42,11 +39,6 @@ export default function LoginPage() {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">

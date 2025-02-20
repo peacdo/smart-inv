@@ -15,33 +15,69 @@ Smart Inventory is designed to streamline inventory management processes through
 
 ### Phase 1: Authentication and Core Setup ✅
 - **Authentication System**
-  - Secure login/logout
+  - Secure login/logout with NextAuth.js
   - Role-based access control (ADMIN, WORKER1, WORKER2)
-  - Protected routes
-  - Session management
+  - Protected routes and middleware
+  - Session management with JWT
+  - Password hashing with bcrypt
 
 - **User Management**
-  - Admin dashboard
-  - User role management
-  - User creation and editing
+  - Admin dashboard for user management
+  - Role assignment and management
+  - User profile management
+  - Activity tracking
 
 - **Dashboard**
-  - Role-specific views
+  - Role-specific views and layouts
   - Key metrics and statistics
   - Recent activity tracking
+  - Quick access to common functions
 
-### Phase 2: Inventory Management 🚧
-- Item tracking with QR codes
-- Stock level monitoring
-- Location management
-- Expiry date tracking
-- Item categorization
+### Phase 2: Inventory Management ✅
+- **Item Tracking with QR Codes**
+  - QR code generation for each item
+  - Multiple QR codes per item support
+  - Public item view pages
+  - QR code download functionality
+  - Easy URL sharing
+
+- **Stock Management**
+  - Real-time stock level monitoring
+  - Automatic status updates
+  - Low stock alerts based on minimum levels
+  - Stock history tracking
+  - Stock movement logging
+
+- **Location Management**
+  - Structured warehouse organization
+  - Aisle and shelf tracking
+  - Location-based inventory organization
+  - Easy item location lookup
+
+- **Item Details**
+  - Comprehensive item information
+  - Expiry date tracking
+  - Storage conditions
+  - Handling instructions
+  - Physical specifications (dimensions, weight)
+  - Category assignment
+
+- **Status and Categorization**
+  - Multiple status types:
+    - AVAILABLE
+    - LOW_STOCK
+    - OUT_OF_STOCK
+    - EXPIRED
+    - DAMAGED
+  - Visual status indicators
+  - Category-based organization
+  - Flexible category management
 
 ### Phase 3: Order Processing 🚧
-- Order creation and management
-- Request handling
-- Stock movement tracking
-- Order history
+- Order creation and management (Pending)
+- Request handling system (Pending)
+- Stock movement tracking (Pending)
+- Order history and analytics (Pending)
 
 ## Tech Stack
 
@@ -52,6 +88,7 @@ Smart Inventory is designed to streamline inventory management processes through
 - **Authentication**: NextAuth.js
 - **Container**: Docker
 - **Type Safety**: TypeScript
+- **QR Code**: qrcode.react
 
 ## Getting Started
 
@@ -90,39 +127,37 @@ docker-compose up -d
 npx prisma migrate dev
 ```
 
-6. Create initial admin user:
+6. Seed the database:
 ```bash
-npm run create-admin
+npx prisma db seed
 ```
 
-7. Create test users:
-```bash
-npm run create-test-users
-```
-
-8. Start the development server:
+7. Start the development server:
 ```bash
 npm run dev
 ```
 
 ### Default Users
 
-The system comes with three default users:
+The system comes with pre-configured users:
 
 1. **Admin User**
-   - Email: admin@smartinv.com
-   - Password: admin123
+   - Email: admin@example.com
+   - Password: password123
    - Role: ADMIN
+   - Access: Full system access
 
 2. **Storage Worker**
    - Email: worker1@smartinv.com
    - Password: worker123
    - Role: WORKER1
+   - Access: Inventory management
 
 3. **Order Handler**
    - Email: worker2@smartinv.com
    - Password: worker123
    - Role: WORKER2
+   - Access: Order processing
 
 ## Project Structure
 
@@ -130,13 +165,45 @@ The system comes with three default users:
 smart-inv/
 ├── src/
 │   ├── app/              # Next.js 14 app directory
-│   ├── components/       # React components
-│   ├── lib/             # Utility functions and configurations
-│   └── types/           # TypeScript type definitions
-├── prisma/              # Database schema and migrations
-├── public/             # Static files
-└── scripts/            # Setup and utility scripts
+│   │   ├── api/         # API routes
+│   │   ├── dashboard/   # Protected dashboard routes
+│   │   └── i/          # Public item views
+│   ├── components/      # React components
+│   ├── lib/            # Utility functions and configurations
+│   ├── services/       # Business logic and data services
+│   └── types/          # TypeScript type definitions
+├── prisma/             # Database schema and migrations
+├── public/            # Static files
+└── scripts/           # Setup and utility scripts
 ```
+
+## API Routes
+
+### Authentication
+- POST `/api/auth/signin` - User login
+- POST `/api/auth/signout` - User logout
+
+### Items
+- GET `/api/items` - List all items
+- POST `/api/items` - Create new item
+- GET `/api/items/[id]` - Get item details
+- PUT `/api/items/[id]` - Update item
+- DELETE `/api/items/[id]` - Delete item
+
+### QR Codes
+- GET `/api/items/[id]/qr-code` - Get item QR codes
+- POST `/api/items/[id]/qr-code` - Generate new QR code
+- DELETE `/api/items/[id]/qr-code` - Delete QR code
+
+### Categories
+- GET `/api/categories` - List all categories
+- POST `/api/categories` - Create new category
+- PUT `/api/categories/[id]` - Update category
+- DELETE `/api/categories/[id]` - Delete category
+
+### Stock History
+- GET `/api/items/[id]/stock-history` - Get item stock history
+- GET `/api/items/[id]/stock-history?type=stats` - Get stock statistics
 
 ## Contributing
 
@@ -147,4 +214,4 @@ smart-inv/
 
 ## License
 
-[License Type] - See LICENSE file for details
+MIT License - See LICENSE file for details
