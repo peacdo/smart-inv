@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  items         Item[]
+  requests      Request[]
+}
+
+model Item {
+  id                  String    @id @default(cuid())
+  name                String
+  description         String?
+  image              String?
+  dimensions         String?
+  weight             Float?
+  storageConditions  String?
+  handlingInstructions String?
+  stockLevel         Int       @default(0)
+  location           String?
+  expiryDate         DateTime?
+  status             ItemStatus @default(AVAILABLE)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdBy          User      @relation(fields: [userId], references: [id])
+  userId             String
+  qrCodes            QRCode[]
+  requests           Request[]
+}
+
+model QRCode {
+  id          String    @id @default(cuid())
+  url         String    @unique
+  isActive    Boolean   @default(true)
+  item        Item      @relation(fields: [itemId], references: [id])
+  itemId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  type        RequestType
+  status      RequestStatus @default(PENDING)
+  item        Item         @relation(fields: [itemId], references: [id])
+  itemId      String
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  quantity    Int          @default(1)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum UserRole {
+  ADMIN
+  WORKER1
+  WORKER2
+  USER
+}
+
+enum ItemStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+  EXPIRED
+  DAMAGED
+}
+
+enum RequestType {
+  CHECKOUT
+  RETURN
+  RESTOCK
+  MAINTENANCE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  COMPLETED
+  CANCELLED
+}
