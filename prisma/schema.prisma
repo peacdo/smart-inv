@@ -22,23 +22,63 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   items         Item[]
+  itemCatalogs  ItemCatalog[]
   requests      Request[]
   stockUpdates  StockHistory[]
+  orders        Order[]    @relation("UserOrders")
+  purchaseOrders    PurchaseOrder[]
+  goodsReceipts     GoodsReceipt[]
+}
+
+model ItemCatalog {
+  id                  String    @id @default(cuid())
+  name                String
+  description         String?
+  dimensions          String?
+  weight             Float?
+  storageConditions  String?
+  handlingInstructions String?
+  minimumStockLevel  Int       @default(5)
+  reorderPoint       Int       @default(0)
+  category           Category? @relation(fields: [categoryId], references: [id])
+  categoryId         String?
+  status             ItemStatus @default(AVAILABLE)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdBy          User      @relation(fields: [userId], references: [id])
+  userId             String
+  suppliers          SupplierItem[]
+}
+
+model SupplierItem {
+  id                String      @id @default(cuid())
+  supplier          Supplier    @relation(fields: [supplierId], references: [id])
+  supplierId        String
+  itemCatalog       ItemCatalog @relation(fields: [itemCatalogId], references: [id])
+  itemCatalogId     String
+  unitPrice         Float
+  leadTime          Int?        // in days
+  minimumOrderQty   Int         @default(1)
+  packSize          Int         @default(1)
+  isPreferred       Boolean     @default(false)
+  supplierSku       String?     // Supplier's own product code
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([supplierId, itemCatalogId])
 }
 
 model Item {
   id                  String    @id @default(cuid())
   name                String
   description         String?
-  image              String?
-  dimensions         String?
+  dimensions          String?
   weight             Float?
   storageConditions  String?
   handlingInstructions String?
   stockLevel         Int       @default(0)
-  minimumStockLevel  Int       @default(5)
-  category           Category? @relation(fields: [categoryId], references: [id])
   categoryId         String?
+  category           Category? @relation(fields: [categoryId], references: [id], name: "LegacyItems")
   warehouse          String?
   aisle              String?
   shelf              String?
@@ -51,6 +91,12 @@ model Item {
   qrCodes            QRCode[]
   requests           Request[]
   stockHistory       StockHistory[]
+  orders             Order[]    @relation("OrderItems")
+  supplier           Supplier   @relation("SupplierItems", fields: [supplierId], references: [id])
+  supplierId         String
+  purchaseOrderItems PurchaseOrderItem[]
+  receiptItems      GoodsReceiptItem[]
+  lastCountDate     DateTime?
 }
 
 model QRCode {
@@ -81,7 +127,8 @@ model Category {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?
-  items       Item[]
+  items       ItemCatalog[]
+  legacyItems Item[]    @relation("LegacyItems")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -97,6 +144,82 @@ model StockHistory {
   updatedBy   User      @relation(fields: [userId], references: [id])
   userId      String
   createdAt   DateTime  @default(now())
+}
+
+model Order {
+  id          String        @id @default(cuid())
+  user        User          @relation("UserOrders", fields: [userId], references: [id])
+  userId      String
+  items       Item[]        @relation("OrderItems")
+  status      OrderStatus   @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Supplier {
+  id          String    @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  purchaseOrders PurchaseOrder[]
+  items       Item[]    @relation("SupplierItems")
+  supplierItems SupplierItem[]
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  supplier    Supplier  @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  status      POStatus  @default(DRAFT)
+  items       PurchaseOrderItem[]
+  totalAmount Float
+  notes       String?
+  createdBy   User      @relation(fields: [userId], references: [id])
+  userId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  receipts    GoodsReceipt[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId String
+  item            Item          @relation(fields: [itemId], references: [id])
+  itemId          String
+  quantity        Int
+  unitPrice       Float
+  totalPrice      Float
+  receivedQty     Int           @default(0)
+  notes           String?
+}
+
+model GoodsReceipt {
+  id              String        @id @default(cuid())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId String
+  receivedBy      User          @relation(fields: [userId], references: [id])
+  userId          String
+  receivedDate    DateTime      @default(now())
+  items           GoodsReceiptItem[]
+  notes           String?
+  status          ReceiptStatus @default(PENDING)
+}
+
+model GoodsReceiptItem {
+  id              String        @id @default(cuid())
+  receipt         GoodsReceipt  @relation(fields: [receiptId], references: [id])
+  receiptId       String
+  item            Item          @relation(fields: [itemId], references: [id])
+  itemId          String
+  quantity        Int
+  batchNumber     String?
+  expiryDate      DateTime?
+  notes           String?
 }
 
 enum UserRole {
@@ -136,4 +259,25 @@ enum StockUpdateReason {
   DAMAGE
   ADJUSTMENT
   EXPIRED
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  CANCELLED
+}
+
+enum POStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  RECEIVED
+  CANCELLED
+}
+
+enum ReceiptStatus {
+  PENDING
+  COMPLETED
+  REJECTED
 }

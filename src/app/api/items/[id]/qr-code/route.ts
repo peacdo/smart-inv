@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth/auth-options"
-import { generateQRCode, getQRCodes, deleteQRCode } from "../../../../../services/qrCodeService"
+import { generateQRCode, getQRCodes, deleteQRCode } from "@/services/qrCodeService"
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -32,7 +32,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { id } = await context.params
   const searchParams = new URL(request.url).searchParams
   const qrCodeId = searchParams.get("qrCodeId")
 

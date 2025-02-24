@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { createStockHistory } from "./stockHistoryService"
-import { ItemStatus } from "@prisma/client"
+import { ItemStatus, StockUpdateReason } from "@prisma/client"
 
 export async function getItem(id: string) {
   try {
     const item = await prisma.item.findUnique({
       where: { id },
       include: {
+        category: true,
         createdBy: {
           select: {
             name: true,
             email: true,
           },
         },
-        category: true,
-        qrCodes: true,
       },
     })
 
@@ -48,10 +47,9 @@ export async function updateItem(request: Request, id: string) {
       expiryDate,
       status,
       minimumStockLevel,
-      userId, // Added to track who made the change
+      userId,
     } = json
 
-    // Get the current item to compare stock levels
     const currentItem = await prisma.item.findUnique({
       where: { id },
       select: { stockLevel: true },
@@ -61,7 +59,6 @@ export async function updateItem(request: Request, id: string) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 })
     }
 
-    // Determine the new status based on stock level and minimum stock level
     let newStatus = status
     if (stockLevel <= 0) {
       newStatus = ItemStatus.OUT_OF_STOCK
@@ -100,13 +97,12 @@ export async function updateItem(request: Request, id: string) {
       },
     })
 
-    // Create stock history if stock level changed
     if (currentItem.stockLevel !== stockLevel) {
       await createStockHistory(
         id,
         currentItem.stockLevel,
         stockLevel,
-        stockLevel > currentItem.stockLevel ? "RESTOCK" : "ADJUSTMENT",
+        stockLevel > currentItem.stockLevel ? StockUpdateReason.RESTOCK : StockUpdateReason.ADJUSTMENT,
         userId,
         "Stock level updated"
       )
@@ -119,22 +115,8 @@ export async function updateItem(request: Request, id: string) {
   }
 }
 
-export async function deleteItem(id: string, session: any) {
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+export async function deleteItem(id: string) {
   try {
-    // First delete all associated QR codes and stock history
-    await prisma.qRCode.deleteMany({
-      where: { itemId: id },
-    })
-
-    await prisma.stockHistory.deleteMany({
-      where: { itemId: id },
-    })
-
-    // Then delete the item
     await prisma.item.delete({
       where: { id },
     })
@@ -144,4 +126,24 @@ export async function deleteItem(id: string, session: any) {
     console.error("Error deleting item:", error)
     return NextResponse.json({ error: "Error deleting item" }, { status: 500 })
   }
+}
+
+export async function createStockHistory(
+  itemId: string,
+  oldLevel: number,
+  newLevel: number,
+  reason: StockUpdateReason,
+  userId: string,
+  notes?: string
+) {
+  return await prisma.stockHistory.create({
+    data: {
+      itemId,
+      oldLevel,
+      newLevel,
+      reason,
+      userId,
+      notes,
+    },
+  })
 } 

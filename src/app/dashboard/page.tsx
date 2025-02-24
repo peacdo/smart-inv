@@ -51,7 +51,11 @@ export default function DashboardPage() {
     },
   }
 
-  const content = roleSpecificContent[session.user.role as keyof typeof roleSpecificContent]
+  const content = roleSpecificContent[session.user.role as keyof typeof roleSpecificContent] || {
+    title: "Dashboard",
+    description: "Welcome to the dashboard.",
+    stats: [],
+  };
 
   return (
     <div>

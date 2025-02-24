@@ -1,11 +1,10 @@
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import { compare } from "bcrypt"
+import { UserRole } from "@prisma/client"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
@@ -23,7 +22,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error("Email and password are required")
         }
 
         const user = await prisma.user.findUnique({
@@ -33,13 +32,13 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user || !user.password) {
-          return null
+          throw new Error("Invalid email or password")
         }
 
         const isPasswordValid = await compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
-          return null
+          throw new Error("Invalid email or password")
         }
 
         return {
@@ -57,7 +56,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.name = token.name as string
         session.user.email = token.email as string
-        session.user.role = token.role as string
+        session.user.role = token.role as UserRole
       }
 
       return session
@@ -65,7 +64,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.role = user.role
+        token.role = user.role as UserRole
       }
 
       return token

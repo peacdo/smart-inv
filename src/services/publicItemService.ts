@@ -14,7 +14,6 @@ export async function getPublicItem(id: string) {
         storageConditions: true,
         handlingInstructions: true,
         stockLevel: true,
-        location: true,
         status: true,
         createdAt: true,
       },

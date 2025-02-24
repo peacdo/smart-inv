@@ -3,9 +3,11 @@
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -21,12 +23,14 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
+        setError(result.error)
         return
       }
 
       router.push("/dashboard")
       router.refresh()
     } catch (error) {
+      setError("An unexpected error occurred during sign in.")
     }
   }
 
@@ -37,6 +41,12 @@ export default function LoginPage() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to Smart Inventory
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{" "}
+            <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+              create a new account
+            </Link>
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -66,6 +76,10 @@ export default function LoginPage() {
                 placeholder="Password"
               />
             </div>
+          </div>
+
+          <div>
+            {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
           </div>
 
           <div>

@@ -15,8 +15,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Dashboard", href: "/dashboard", role: ["ADMIN", "WORKER1", "WORKER2"] },
     { name: "Inventory", href: "/dashboard/inventory", role: ["ADMIN", "WORKER1"] },
     { name: "Orders", href: "/dashboard/orders", role: ["ADMIN", "WORKER2"] },
+    { name: "Goods Receipts", href: "/dashboard/goods-receipts", role: ["ADMIN", "WORKER1"] },
+    { name: "Create Receipt", href: "/dashboard/goods-receipts/new", role: ["ADMIN", "WORKER1"] },
     { name: "QR Codes", href: "/dashboard/qr-codes", role: ["ADMIN"] },
     { name: "Users", href: "/dashboard/users", role: ["ADMIN"] },
+    { name: "Requests", href: "/dashboard/requests", role: ["ADMIN", "WORKER2"] },
   ]
 
   const filteredNavigation = navigation.filter((item) =>

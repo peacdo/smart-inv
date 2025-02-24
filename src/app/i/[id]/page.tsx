@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 interface ItemDetails {
   id: string
@@ -16,7 +18,9 @@ interface ItemDetails {
   createdAt: string
 }
 
-export default function PublicItemPage({ params }: { params: { id: string } }) {
+export default function PublicItemPage() {
+  const params = useParams()
+  const { data: session } = useSession()
   const [item, setItem] = useState<ItemDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +28,8 @@ export default function PublicItemPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const response = await fetch(`/api/public/items/${params.id}`)
+        const { id } = await params
+        const response = await fetch(`/api/public/items/${id}`)
         if (!response.ok) {
           throw new Error("Item not found")
         }
@@ -38,7 +43,40 @@ export default function PublicItemPage({ params }: { params: { id: string } }) {
     }
 
     fetchItem()
-  }, [params.id])
+  }, [params])
+
+  const handleRequestItem = async () => {
+    if (!item || !session) return;
+
+    try {
+      const response = await fetch("/api/requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "CHECKOUT",
+          itemId: item.id,
+          userId: session.user.id,
+          quantity: 1,
+          notes: "Requesting this item",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to request item");
+      }
+
+      alert("Item requested successfully!");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to request item");
+    }
+  };
+
+  const handleReportIssue = () => {
+    // Redirect to report issue page or open a modal
+    alert("Report Issue functionality not implemented yet.");
+  };
 
   if (loading) {
     return (
@@ -158,12 +196,14 @@ export default function PublicItemPage({ params }: { params: { id: string } }) {
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:gap-6">
               <button
                 type="button"
+                onClick={handleRequestItem}
                 className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               >
                 Request Item
               </button>
               <button
                 type="button"
+                onClick={handleReportIssue}
                 className="inline-flex items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               >
                 Report Issue

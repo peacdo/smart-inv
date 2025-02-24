@@ -25,22 +25,22 @@ export function QRCodeSection({ itemId }: QRCodeSectionProps) {
   const [generating, setGenerating] = useState(false)
   const qrCodeRefs = useRef<QRCodeRefs>({})
 
-  const fetchQRCodes = async () => {
-    try {
-      const response = await fetch(`/api/items/${itemId}/qr-code`)
-      if (!response.ok) {
-        throw new Error("Failed to fetch QR codes")
-      }
-      const data = await response.json()
-      setQrCodes(data)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Failed to load QR codes")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
+    async function fetchQRCodes() {
+      try {
+        const response = await fetch(`/api/items/${itemId}/qr-code`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch QR codes")
+        }
+        const data = await response.json()
+        setQrCodes(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to load QR codes")
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchQRCodes()
   }, [itemId])
 
@@ -123,7 +123,11 @@ export function QRCodeSection({ itemId }: QRCodeSectionProps) {
           >
             <div className="flex justify-center mb-4">
               <QRCodeSVG
-                ref={(el: SVGSVGElement | null) => (qrCodeRefs.current[qrCode.id] = el)}
+                ref={(el: SVGSVGElement | null) => {
+                  if (el) {
+                    qrCodeRefs.current[qrCode.id] = el;
+                  }
+                }}
                 value={qrCode.url}
                 size={200}
                 level="H"
