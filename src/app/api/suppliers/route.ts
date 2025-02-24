@@ -1,33 +1,30 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createProtectedRoute } from "@/lib/utils/auth-middleware";
+import { getSuppliers, createSupplier } from "@/services/supplierService";
 import { APIError } from "@/lib/utils/api-error";
+import { validateSupplierData } from "@/lib/utils/validation/supplier";
 
-export async function GET(request: Request) {
+async function handleGetSuppliers(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search") || undefined;
+    const status = searchParams.get("status") || undefined;
+    const categoryId = searchParams.get("categoryId") || undefined;
+    const riskLevel = searchParams.get("riskLevel") || undefined;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
 
-    const suppliers = await prisma.supplier.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        address: true,
-        notes: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
+    const result = await getSuppliers({
+      search,
+      status,
+      categoryId,
+      riskLevel,
+      page,
+      limit,
     });
 
-    return NextResponse.json(suppliers);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching suppliers:", error);
     if (error instanceof APIError) {
       return NextResponse.json(
         { error: error.message },
@@ -39,4 +36,28 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
+
+async function handleCreateSupplier(request: Request) {
+  try {
+    const json = await request.json();
+    const validatedData = await validateSupplierData(json);
+    const supplier = await createSupplier(validatedData);
+    
+    return NextResponse.json(supplier, { status: 201 });
+  } catch (error) {
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+    return NextResponse.json(
+      { error: "Error creating supplier" },
+      { status: 500 }
+    );
+  }
+}
+
+export const GET = createProtectedRoute(handleGetSuppliers, ["ADMIN", "WORKER1"]);
+export const POST = createProtectedRoute(handleCreateSupplier, ["ADMIN"]); 

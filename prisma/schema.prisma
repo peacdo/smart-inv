@@ -157,17 +157,100 @@ model Order {
 }
 
 model Supplier {
+  id                String          @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  address           String?
+  notes             String?
+  status            SupplierStatus  @default(ACTIVE)
+  rating            Float?          @db.Real
+  taxId             String?
+  website           String?
+  paymentTerms      String?
+  currency          String?         @default("USD")
+  diversityStatus   String?
+  riskLevel         RiskLevel?
+  onboardingDate    DateTime        @default(now())
+  lastAuditDate     DateTime?
+  nextAuditDate     DateTime?
+  items             Item[]          @relation("SupplierItems")
+  supplierItems     SupplierItem[]
+  contacts          SupplierContact[]
+  documents         SupplierDocument[]
+  categories        SupplierCategory[]
+  purchaseOrders    PurchaseOrder[]
+  qualifications    SupplierQualification[]
+  communications    SupplierCommunication[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model SupplierContact {
   id          String    @id @default(cuid())
+  supplierId  String
   name        String
-  email       String?
+  title       String?
+  email       String
   phone       String?
-  address     String?
-  notes       String?
+  isPrimary   Boolean   @default(false)
+  department  String?
+  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  purchaseOrders PurchaseOrder[]
-  items       Item[]    @relation("SupplierItems")
-  supplierItems SupplierItem[]
+
+  @@unique([supplierId, email])
+}
+
+model SupplierDocument {
+  id          String            @id @default(cuid())
+  supplierId  String
+  type        DocumentType
+  name        String
+  url         String
+  expiryDate  DateTime?
+  status      DocumentStatus    @default(ACTIVE)
+  supplier    Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model SupplierCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  suppliers   Supplier[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model SupplierQualification {
+  id              String    @id @default(cuid())
+  supplierId      String
+  type            String
+  status          QualificationStatus @default(PENDING)
+  validFrom       DateTime
+  validUntil      DateTime?
+  attachments     String[]
+  notes           String?
+  supplier        Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SupplierCommunication {
+  id          String    @id @default(cuid())
+  supplierId  String
+  type        CommunicationType
+  subject     String
+  content     String
+  attachments String[]
+  sender      String
+  recipient   String
+  status      CommunicationStatus @default(SENT)
+  supplier    Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model PurchaseOrder {
@@ -280,4 +363,59 @@ enum ReceiptStatus {
   PENDING
   COMPLETED
   REJECTED
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+  BLACKLISTED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DocumentType {
+  CONTRACT
+  CERTIFICATION
+  INSURANCE
+  LICENSE
+  FINANCIAL
+  COMPLIANCE
+  OTHER
+}
+
+enum DocumentStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+  REJECTED
+}
+
+enum QualificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum CommunicationType {
+  EMAIL
+  MEETING
+  PHONE
+  AUDIT
+  OTHER
+}
+
+enum CommunicationStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  READ
+  ARCHIVED
 }
